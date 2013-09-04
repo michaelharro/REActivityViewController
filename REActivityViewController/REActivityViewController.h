@@ -27,17 +27,13 @@
 #import "REActivityView.h"
 #import "REActivities.h"
 
-// Check is iPhone5 screen
-#define IS_IPHONE_5 ( fabs( ( double )[ [ UIScreen mainScreen ] bounds ].size.height - ( double )568 ) < DBL_EPSILON )
-
 @interface REActivityViewController : UIViewController
 
-@property (nonatomic, strong, readonly) UIView *backgroundView;
+@property (nonatomic, strong) UIView *backgroundView;
 @property (strong, readonly, nonatomic) NSArray *activities;
 @property (strong, nonatomic) NSDictionary *userInfo;
 @property (strong, nonatomic) REActivityView *activityView;
 @property (weak, nonatomic) UIViewController *presentingController;
-@property (weak, nonatomic) UIViewController *rootViewController;
 
 - (id)initWithViewController:(UIViewController *)viewController activities:(NSArray *)activities;
 - (void)presentFromRootViewController;

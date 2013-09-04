@@ -26,18 +26,28 @@
 #import <UIKit/UIKit.h>
 #import "REActivity.h"
 
-// Check is iPhone5 screen
-#define IS_IPHONE_5 ( fabs( ( double )[ [ UIScreen mainScreen ] bounds ].size.height - ( double )568 ) < DBL_EPSILON )
+extern CGFloat const REActivityWidth;
+extern CGFloat const REActivityHeight;
+extern CGFloat const REActivityViewVerticalMargin;
+extern CGFloat const REActivityViewHorizontalMargin;
+extern NSUInteger const REActivityViewMaxRowPerPage;
+extern CGFloat const REActivityImageWidth;
+extern CGFloat const REActivityImageHeight;
+extern CGFloat const REActivityLabelWidth;
+extern CGFloat const REActivityLabelHeight;
+extern CGFloat const REActivityPageControlHeight;
 
-@interface REActivityView : UIView <UIScrollViewDelegate> {
-    UIPageControl *_pageControl;
-}
+@interface REActivityView : UIView <UIScrollViewDelegate>
 
-@property (strong, nonatomic) UIImageView *backgroundImageView;
+//@property (strong, nonatomic) UIImageView *backgroundImageView;
 @property (strong, nonatomic) UIScrollView *scrollView;
+@property (strong, nonatomic) UIPageControl *pageControl;
 @property (strong, nonatomic) NSArray *activities;
 @property (weak, nonatomic) REActivityViewController *activityViewController;
-@property (strong, nonatomic) UIButton *cancelButton;
+//@property (strong, nonatomic) UIButton *cancelButton;
+@property (nonatomic, assign) NSUInteger maxRowsPerPage;
+@property (nonatomic, assign) NSUInteger maxColumnsPerPage;
+
 
 - (id)initWithFrame:(CGRect)frame activities:(NSArray *)activities;
 

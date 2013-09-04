@@ -26,6 +26,17 @@
 #import "REActivityView.h"
 #import "REActivityViewController.h"
 
+CGFloat const REActivityWidth					= 65.0f;
+CGFloat const REActivityHeight					= 65.0f;
+CGFloat const REActivityViewVerticalMargin		= 5.0f;
+CGFloat const REActivityViewHorizontalMargin	= 5.0f;
+NSUInteger const REActivityViewMaxRowPerPage	= 2;
+CGFloat const REActivityImageWidth				= 48.0f;
+CGFloat const REActivityImageHeight				= 48.0f;
+CGFloat const REActivityLabelWidth				= REActivityWidth;
+CGFloat const REActivityLabelHeight				= 15.0f;
+CGFloat const REActivityPageControlHeight		= 10.0f;
+
 #ifdef __IPHONE_6_0 // iOS6 and later
 #   define UITextAlignmentCenter    NSTextAlignmentCenter
 #   define UITextAlignmentLeft      NSTextAlignmentLeft
@@ -34,109 +45,147 @@
 #   define UILineBreakModeMiddleTruncation   NSLineBreakByTruncatingMiddle
 #endif
 
+@interface REActivityView ()
+- (NSUInteger)numberOfPagesForActivities;
+- (NSInteger)maxActivitiesPerPage;
+- (void)enumerateActivitiesWithBlock:(void (^)(REActivity *activity, NSInteger index, NSInteger row, NSInteger column, NSInteger page))activityblock;
+
+@end
+
 @implementation REActivityView
+
+@synthesize activities			= _activities;
+@synthesize activityViewController	= _activityViewController;
+@synthesize scrollView			= _scrollView;
+@synthesize pageControl			= _pageControl;
+@synthesize maxRowsPerPage		= _maxRowsPerPage;
+@synthesize maxColumnsPerPage	= _maxColumnsPerPage;
+
 
 - (id)initWithFrame:(CGRect)frame activities:(NSArray *)activities
 {    
     self = [super initWithFrame:frame];
+	
     if (self) {
-        self.clipsToBounds = YES;
-        _activities = activities;
-        
-        if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
-            _backgroundImageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, frame.size.width, (IS_IPHONE_5)? 517 :417)];
-            _backgroundImageView.image = [UIImage imageNamed:@"REActivityViewController.bundle/Background"];
-            _backgroundImageView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-            [self addSubview:_backgroundImageView];
-        }
+		
+        self.clipsToBounds	= YES;
+        self.activities		= activities;
+		
+		self.maxRowsPerPage		= REActivityViewMaxRowPerPage;
+		self.maxColumnsPerPage	= 0;
     
-        _scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 39, frame.size.width, self.frame.size.height - 104)];
-        _scrollView.showsHorizontalScrollIndicator = NO;
-        _scrollView.showsVerticalScrollIndicator = NO;
-        _scrollView.delegate = self;
-        _scrollView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-        [self addSubview:_scrollView];
-        
-        NSInteger index = 0;
-        NSInteger row = -1;
-        NSInteger page = -1;
-        for (REActivity *activity in _activities) {
-            NSInteger col;
-            
-            col = index%3;
-            if (index % 3 == 0) row++;
-            if (IS_IPHONE_5) {
-                if (index % 12 == 0) {
-                    row = 0;
-                    page++;
-                }
-            } else {
-                if (index % 9 == 0) {
-                    row = 0;
-                    page++;
-                }
-            }
-
-            UIView *view = [self viewForActivity:activity
+        self.scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, CGRectGetWidth(frame), CGRectGetHeight(frame))];
+        self.scrollView.showsHorizontalScrollIndicator	= NO;
+        self.scrollView.showsVerticalScrollIndicator	= NO;
+        self.scrollView.delegate						= self;
+        self.scrollView.autoresizingMask				= UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self addSubview:self.scrollView];
+		
+		__weak __typeof(&*self)weakSelf = self;
+		[self enumerateActivitiesWithBlock:^(REActivity *activity, NSInteger index, NSInteger row, NSInteger column, NSInteger page) {
+			
+			UIView *view = [weakSelf viewForActivity:activity
                                            index:index
-                                               x:(20 + col*80 + col*20) + page * frame.size.width
-                                               y:row*80 + row*20];
-            [_scrollView addSubview:view];
-            index++;
+                                               x:(REActivityViewHorizontalMargin + (column * REActivityWidth) + (column * REActivityViewHorizontalMargin)) + (page * CGRectGetWidth(weakSelf.frame))
+                                               y:(REActivityViewVerticalMargin + (row * REActivityHeight) + (row * REActivityViewVerticalMargin))];
+			
+            [weakSelf.scrollView addSubview:view];
+			
+		}];
+		
+		NSInteger numberOfPages			= self.numberOfPagesForActivities;
+        self.scrollView.contentSize		= CGSizeMake((numberOfPages + 1) * CGRectGetWidth(self.frame), CGRectGetHeight(self.scrollView.frame));
+        self.scrollView.pagingEnabled	= YES;
+        
+        self.pageControl = [[UIPageControl alloc] initWithFrame:CGRectMake(0, CGRectGetHeight(self.frame) - REActivityPageControlHeight - REActivityViewVerticalMargin, CGRectGetWidth(self.frame), REActivityPageControlHeight)];
+        self.pageControl.numberOfPages = numberOfPages + 1;
+        [self.pageControl addTarget:self action:@selector(pageControlValueChanged:) forControlEvents:UIControlEventValueChanged];
+        [self addSubview:self.pageControl];
+        
+        if (self.pageControl.numberOfPages <= 1) {
+            self.pageControl.hidden = YES;
+            self.scrollView.scrollEnabled = NO;
         }
-        _scrollView.contentSize = CGSizeMake((page +1) * frame.size.width, _scrollView.frame.size.height);
-        _scrollView.pagingEnabled = YES;
-        
-        _pageControl = [[UIPageControl alloc] initWithFrame:CGRectMake(0, frame.size.height - 84, frame.size.width, 10)];
-        _pageControl.numberOfPages = page + 1;
-        [_pageControl addTarget:self action:@selector(pageControlValueChanged:) forControlEvents:UIControlEventValueChanged];
-        [self addSubview:_pageControl];
-        
-        if (_pageControl.numberOfPages <= 1) {
-            _pageControl.hidden = YES;
-            _scrollView.scrollEnabled = NO;
-        }
-        
-        _cancelButton = [UIButton buttonWithType:UIButtonTypeCustom];
-        [_cancelButton setBackgroundImage:[[UIImage imageNamed:@"REActivityViewController.bundle/Button"] stretchableImageWithLeftCapWidth:22 topCapHeight:47] forState:UIControlStateNormal];
-        _cancelButton.frame = CGRectMake(22, 352, 276, 47);
-        [_cancelButton setTitle:NSLocalizedStringFromTable(@"button.cancel", @"REActivityViewController", @"Cancel") forState:UIControlStateNormal];
-        [_cancelButton setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
-        [_cancelButton setTitleShadowColor:[UIColor colorWithRed:0 green:0 blue:0 alpha:0.4] forState:UIControlStateNormal];
-        [_cancelButton.titleLabel setShadowOffset:CGSizeMake(0, -1)];
-        [_cancelButton.titleLabel setFont:[UIFont boldSystemFontOfSize:19]];
-        [_cancelButton addTarget:self action:@selector(cancelButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-        [self addSubview:_cancelButton];
+		
     }
+	
     return self;
+}
+
+- (NSUInteger)maxColumnsPerPage {
+	
+	return (NSInteger)floor( ( CGRectGetWidth(self.frame) - REActivityViewHorizontalMargin ) / ( REActivityWidth + REActivityViewHorizontalMargin ) );
+	
+}
+
+- (NSInteger)maxActivitiesPerPage {
+	
+	return self.maxRowsPerPage * self.maxColumnsPerPage;
+	
+}
+
+- (NSUInteger)numberOfPagesForActivities {
+	
+	if (self.activities) {
+		
+		return ceil( self.activities.count / ( self.maxActivitiesPerPage ) );
+		
+	} else {
+		
+		return 0;
+		
+	}
+	
+}
+
+- (void)enumerateActivitiesWithBlock:(void (^)(REActivity *activity, NSInteger index, NSInteger row, NSInteger column, NSInteger page))activityblock {
+	
+	NSInteger index = 0;
+	NSInteger row = -1;
+	NSInteger page = -1;
+	
+	for (REActivity *activity in self.activities) {
+		NSInteger col;
+		
+		col = index % self.maxColumnsPerPage;
+		
+		if (index % self.maxColumnsPerPage == 0) {
+			row++;
+		}
+		
+		if (index % self.maxActivitiesPerPage == 0) {
+			row = 0;
+			page++;
+		}
+		
+		activityblock(activity, index, row, col, page);
+		
+		index++;
+	}
+	
 }
 
 - (UIView *)viewForActivity:(REActivity *)activity index:(NSInteger)index x:(NSInteger)x y:(NSInteger)y
 {
-    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(x, y, 80, 80)];
+    UIView *view		= [[UIView alloc] initWithFrame:CGRectMake(x, y, REActivityWidth, REActivityHeight)];
+	view.tag			= index;
     
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
-    button.frame = CGRectMake(10, 0, 59, 59);
-    button.tag = index;
+    UIButton *button	= [UIButton buttonWithType:UIButtonTypeCustom];
+    button.frame		= CGRectMake( 0.5 * (REActivityWidth - REActivityImageWidth), 0, REActivityImageWidth, REActivityImageHeight);
     [button addTarget:self action:@selector(buttonPressed:) forControlEvents:UIControlEventTouchUpInside];
     [button setBackgroundImage:activity.image forState:UIControlStateNormal];
     button.accessibilityLabel = activity.title;
     [view addSubview:button];
     
-    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(0, 59, 80, 30)];
+    UILabel *label		= [[UILabel alloc] initWithFrame:CGRectMake(0, REActivityHeight - REActivityLabelHeight, REActivityLabelWidth, REActivityLabelHeight)];
     label.textAlignment = UITextAlignmentCenter;
     label.backgroundColor = [UIColor clearColor];
-    label.textColor = [UIColor whiteColor];
-    label.shadowColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.75];
-    label.shadowOffset = CGSizeMake(0, 1);
-    label.text = activity.title;
-    label.font = [UIFont boldSystemFontOfSize:12];
-    label.numberOfLines = 0;
-    [label setNumberOfLines:0];
-    [label sizeToFit];
-    CGRect frame = label.frame;
-    frame.origin.x = roundf((view.frame.size.width - frame.size.width) / 2.0f);
-    label.frame = frame;
+    label.textColor		= [UIColor whiteColor];
+    label.shadowColor	= [UIColor colorWithRed:0 green:0 blue:0 alpha:0.75];
+    label.shadowOffset	= CGSizeMake(0, -1);
+    label.text			= activity.title;
+    label.font			= [UIFont boldSystemFontOfSize:12];
+    label.numberOfLines = 1;
     [view addSubview:label];
     
     return view;
@@ -145,134 +194,71 @@
 - (void)layoutSubviews
 {
     [super layoutSubviews];
-    
-    if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone) {
-        // For iPhone and iPod
-        CGRect scrollViewFrame = _scrollView.frame;
-        CGRect cancelButtonFrame = _cancelButton.frame;
-        UIInterfaceOrientation interfaceOrientation = [[UIApplication sharedApplication] statusBarOrientation];
         
-        if (UIInterfaceOrientationIsPortrait(interfaceOrientation)) {
-            scrollViewFrame.origin.y = 39;
-            
-            cancelButtonFrame.size.width = 276;
-            cancelButtonFrame.origin.y = self.frame.size.height - 47 - 16;
-            cancelButtonFrame.origin.x = (self.frame.size.width - cancelButtonFrame.size.width) / 2.0f;
-        } else {
-            scrollViewFrame.origin.y = 29;
-            
-            cancelButtonFrame.size.width = 236;
-            cancelButtonFrame.origin.y = self.frame.size.height - 47 - 18;
-            cancelButtonFrame.origin.x = (self.frame.size.width - cancelButtonFrame.size.width) / 2.0f;
-        }
-        
-        _scrollView.frame = scrollViewFrame;
-        _cancelButton.frame = cancelButtonFrame;
-        
-        NSInteger index = 0;
-        NSInteger row = -1;
-        NSInteger page = -1;
-        for (UIView *view in [_scrollView subviews]) {
-            NSInteger col;
-            CGRect frame = view.frame;
-            
-            if (UIInterfaceOrientationIsPortrait(interfaceOrientation)) {
-                col = index%3;
-                if (index % 3 == 0) row++;
-                if (IS_IPHONE_5) {
-                    if (index % 12 == 0) {
-                        row = 0;
-                        page++;
-                    }
-                } else {
-                    if (index % 9 == 0) {
-                        row = 0;
-                        page++;
-                    }
-                }
-                
-                frame.origin.x = (20 + col*80 + col*20) + page * self.frame.size.width;
-                
-            } else {
-                col = index%4;
-                if (index % 4 == 0) row++;
-                if (index % 8 == 0) {
-                    row = 0;
-                    page++;
-                }
-                
-                if (IS_IPHONE_5) {
-                    frame.origin.x = (48 + col*80 + col*50) + page * self.frame.size.width;
-                } else {
-                    frame.origin.x = (20 + col*80 + col*40) + page * self.frame.size.width;
-                }
-            }
-            
-            frame.origin.y = row*80 + row*20;
-            view.frame = frame;
-            
-            index++;
-        }
-        
-        _scrollView.contentSize = CGSizeMake((page +1) * self.frame.size.width, _scrollView.frame.size.height);
-        _scrollView.pagingEnabled = YES;
-        
-        CGRect pageControlFrame = _pageControl.frame;
-        pageControlFrame.origin.y = self.frame.size.height - 84;
-        pageControlFrame.size.width = self.frame.size.width;
-        _pageControl.frame = pageControlFrame;
-        _pageControl.numberOfPages = page + 1;
-        
-        if (_pageControl.numberOfPages <= 1) {
-            _pageControl.hidden = YES;
-            _scrollView.scrollEnabled = NO;
-        } else {
-            _pageControl.hidden = NO;
-            _scrollView.scrollEnabled = YES;
-        }
-        
-        [self pageControlValueChanged:_pageControl];
-    } else if (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad) {
-        // For iPad
-        CGRect frame = _cancelButton.frame;
-        frame.origin.y = self.frame.size.height - 47 - 16;
-        frame.origin.x = (self.frame.size.width - frame.size.width) / 2.0f;
-        _cancelButton.frame = frame;
-    }
+	__weak __typeof(&*self)weakSelf = self;
+	[self enumerateActivitiesWithBlock:^(REActivity *activity, NSInteger index, NSInteger row, NSInteger column, NSInteger page) {
+		
+		UIView *view	= [weakSelf viewWithTag:index];
+		CGRect frame	= view.frame;
+		frame.origin.x	= (REActivityViewHorizontalMargin + (column * REActivityWidth) + (column * REActivityViewHorizontalMargin)) + (page * CGRectGetWidth(weakSelf.frame));
+		frame.origin.y	= (REActivityViewVerticalMargin + (row * REActivityHeight) + (row * REActivityViewVerticalMargin));
+		view.frame		= frame;
+		
+	}];
+	
+	NSInteger numberOfPages			= self.numberOfPagesForActivities;
+	self.scrollView.contentSize		= CGSizeMake((numberOfPages + 1) * CGRectGetWidth(self.frame), CGRectGetHeight(self.scrollView.frame));
+	self.scrollView.pagingEnabled	= YES;
+	
+	CGRect pageControlFrame			= self.pageControl.frame;
+	pageControlFrame.origin.y		= CGRectGetMaxY(self.frame) - CGRectGetHeight(pageControlFrame);
+	pageControlFrame.size.width		= CGRectGetWidth(self.frame);
+	self.pageControl.frame			= pageControlFrame;
+	self.pageControl.numberOfPages	= numberOfPages + 1;
+	
+	if (self.pageControl.numberOfPages <= 1) {
+		self.pageControl.hidden = YES;
+		self.scrollView.scrollEnabled = NO;
+	} else {
+		self.pageControl.hidden = NO;
+		self.scrollView.scrollEnabled = YES;
+	}
+	
+	[self pageControlValueChanged:self.pageControl];
+	
 }
 
 #pragma mark -
 #pragma mark Button action
 
-- (void)cancelButtonPressed
-{
-    [_activityViewController dismissViewControllerAnimated:YES completion:nil];
-}
-
-- (void)buttonPressed:(UIButton *)button
-{
-    REActivity *activity = [_activities objectAtIndex:button.tag];
-    activity.activityViewController = _activityViewController;
+- (void)buttonPressed:(UIButton *)button {
+	
+    REActivity *activity = [self.activities objectAtIndex:button.superview.tag];
+    activity.activityViewController = self.activityViewController;
+	
     if (activity.actionBlock) {
-        activity.actionBlock(activity, _activityViewController);
+        activity.actionBlock(activity, self.activityViewController);
     }
+	
 }
 
 #pragma mark -
 #pragma mark UIScrollViewDelegate
 
-- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView
-{
-    _pageControl.currentPage = scrollView.contentOffset.x / scrollView.frame.size.width;
+- (void)scrollViewDidEndDecelerating:(UIScrollView *)scrollView {
+	
+    self.pageControl.currentPage = scrollView.contentOffset.x / scrollView.frame.size.width;
+	
 }
 
 #pragma mark -
 
-- (void)pageControlValueChanged:(UIPageControl *)pageControl
-{
-    CGFloat pageWidth = _scrollView.contentSize.width /_pageControl.numberOfPages;
-    CGFloat x = _pageControl.currentPage * pageWidth;
-    [_scrollView scrollRectToVisible:CGRectMake(x, 0, pageWidth, _scrollView.frame.size.height) animated:YES];
+- (void)pageControlValueChanged:(UIPageControl *)pageControl {
+	
+    CGFloat pageWidth	= self.scrollView.contentSize.width /self.pageControl.numberOfPages;
+    CGFloat x			= self.pageControl.currentPage * pageWidth;
+    [self.scrollView scrollRectToVisible:CGRectMake(x, 0, pageWidth, self.scrollView.frame.size.height) animated:YES];
+	
 }
 
 @end
