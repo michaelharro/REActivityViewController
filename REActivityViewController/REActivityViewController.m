@@ -47,36 +47,28 @@
 	
     if (self) {
 		
-        self.presentingController = viewController;
+        self.presentingController				= viewController;
+		//self.view.backgroundColor				= [UIColor whiteColor];
+		self.view.frame							= self.frameForCurrentOrientation;
         
-		self.backgroundView = [[UIView alloc] initWithFrame:self.view.bounds];
-		self.backgroundView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-		self.backgroundView.backgroundColor = [UIColor blackColor];
-		//self.backgroundView.alpha = 0;
+		self.backgroundView						= [[UIView alloc] initWithFrame:self.view.bounds];
+		self.backgroundView.autoresizingMask	= UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+		self.backgroundView.backgroundColor		= [UIColor blackColor];
+		//self.backgroundView.alpha				= 0;
 		[self.view addSubview:self.backgroundView];
         
 		[self willChangeValueForKey:@"activities"];
         _activities = activities;
 		[self didChangeValueForKey:@"activities"];
 		
-        self.activityView = [[REActivityView alloc] initWithFrame:self.frameForCurrentOrientation activities:activities];
-        self.activityView.autoresizingMask = UIViewAutoresizingFlexibleWidth;
-        self.activityView.activityViewController = self;
+        self.activityView						= [[REActivityView alloc] initWithFrame:self.view.bounds activities:activities];
+        self.activityView.autoresizingMask		= UIViewAutoresizingFlexibleWidth;
+        self.activityView.activityViewController= self;
         [self.view addSubview:self.activityView];
         
     }
 	
     return self;
-	
-}
-
-- (CGRect)frameForCurrentOrientation {
-	
-	return CGRectMake(
-					  0,
-					  CGRectGetHeight(self.presentingController.view.frame) - self.height,
-					  CGRectGetWidth(self.view.frame),
-					  self.height);
 	
 }
 
@@ -88,8 +80,7 @@
 		CGRect afterFrame				= weakSelf.frameForCurrentOrientation;
 		afterFrame.origin.y				= CGRectGetMaxY(self.presentingController.view.frame);
 		
-		weakSelf.activityView.frame		= afterFrame;
-		weakSelf.backgroundView.frame	= afterFrame;
+		weakSelf.view.frame				= afterFrame;
 		weakSelf.backgroundView.alpha	= 0.0;
 		
 	} completion:^(BOOL finished) {
@@ -106,16 +97,20 @@
 
 - (void)presentFromRootViewController
 {
-    UIViewController *rootViewController = [UIApplication sharedApplication].delegate.window.rootViewController;
+    
+	UIViewController *rootViewController = [UIApplication sharedApplication].delegate.window.rootViewController;
     [self presentFromViewController:rootViewController];
+	
 }
 
 - (void)presentFromViewController:(UIViewController *)controller
 {
-    self.presentingController = controller;
+    
+	self.presentingController = controller;
     [controller addChildViewController:self];
     [controller.view addSubview:self.view];
     [self didMoveToParentViewController:controller];
+	
 }
 
 - (void)didMoveToParentViewController:(UIViewController *)parent
@@ -125,26 +120,34 @@
 	CGRect beforeFrame			= self.frameForCurrentOrientation;
 	beforeFrame.origin.y		= CGRectGetMaxY(self.presentingController.view.frame);
 	
-	self.activityView.frame		= beforeFrame;
-    self.backgroundView.frame	= beforeFrame;
+	self.view.frame				= beforeFrame;
 	self.backgroundView.alpha	= 0.0;
     
     __typeof (&*self) __weak weakSelf = self;
 	[UIView animateWithDuration:0.4 animations:^{
 		
 		weakSelf.backgroundView.alpha	= 0.4;
-		weakSelf.backgroundView.frame	= weakSelf.frameForCurrentOrientation;
-		weakSelf.activityView.frame		= weakSelf.frameForCurrentOrientation;
+		weakSelf.view.frame		= weakSelf.frameForCurrentOrientation;
 		
 	}];
+}
+
+- (CGRect)frameForCurrentOrientation {
+	
+	return CGRectMake(
+					  0,
+					  CGRectGetHeight(self.presentingController.view.frame) - self.height,
+					  CGRectGetWidth(self.view.frame),
+					  self.height);
+	
 }
 
 - (CGFloat)height
 {
     
-	NSInteger numberOfActivities		= ( self.activities ? self.activities.count : 0 );
-	NSInteger maxNumberOfColumnsPerPage	= (NSInteger)floor( ( CGRectGetWidth(self.presentingController.view.frame) - REActivityViewHorizontalMargin ) / ( REActivityWidth + REActivityViewHorizontalMargin ) );
-	NSInteger numberOfRowsOnCurrentPage = ceil(numberOfActivities / maxNumberOfColumnsPerPage);
+	CGFloat numberOfActivities			= ( self.activities ? self.activities.count : 0 );
+	CGFloat maxNumberOfColumnsPerPage	= floor( ( CGRectGetWidth(self.presentingController.view.frame) - REActivityViewHorizontalMargin ) / ( REActivityWidth + REActivityViewHorizontalMargin ) );
+	CGFloat numberOfRowsOnCurrentPage	= ceil(numberOfActivities / maxNumberOfColumnsPerPage);
 	
 	return REActivityViewVerticalMargin + ( (REActivityViewVerticalMargin + REActivityHeight) * numberOfRowsOnCurrentPage );
 	
@@ -192,7 +195,7 @@
 {
 	
 	__typeof (&*self) __weak weakSelf = self;
-	CGRect frame = weakSelf.activityView.frame;
+	CGRect frame = weakSelf.view.frame;
 
 	if (toInterfaceOrientation == UIInterfaceOrientationPortrait) {
 		frame.origin.y		= CGRectGetHeight(weakSelf.presentingController.view.frame) - self.height;
@@ -202,8 +205,8 @@
 		frame.size.width	= CGRectGetHeight(weakSelf.presentingController.view.frame);
 	}
 
-	frame.size.height = self.height;
-	weakSelf.activityView.frame = frame;
+	frame.size.height		= self.height;
+	weakSelf.view.frame		= frame;
 	
 }
 

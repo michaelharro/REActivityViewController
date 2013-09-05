@@ -128,7 +128,7 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
 	
 	if (self.activities) {
 		
-		return ceil( self.activities.count / ( self.maxActivitiesPerPage ) );
+		return ceil( (CGFloat)self.activities.count / ( (CGFloat)self.maxActivitiesPerPage ) );
 		
 	} else {
 		
