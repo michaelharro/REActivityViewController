@@ -29,7 +29,7 @@
 CGFloat const REActivityWidth					= 60.0f;
 CGFloat const REActivityHeight					= 40.0f;
 CGFloat const REActivityViewVerticalMargin		= 5.0f;
-CGFloat const REActivityViewHorizontalMargin	= 5.0f;
+CGFloat const REActivityViewHorizontalMargin	= 2.0f;
 NSUInteger const REActivityViewMaxRowPerPage	= 2;
 CGFloat const REActivityImageWidth				= 24.0f;
 CGFloat const REActivityImageHeight				= 24.0f;

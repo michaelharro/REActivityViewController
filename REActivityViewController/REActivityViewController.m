@@ -58,7 +58,7 @@
 		self.backgroundView						= [[UIView alloc] initWithFrame:self.view.bounds];
 		self.backgroundView.autoresizingMask	= UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 		self.backgroundView.backgroundColor		= [UIColor blackColor];
-		self.backgroundView.alpha				= 0.4;
+		self.backgroundView.alpha				= 0.6;
 		[self.view addSubview:self.backgroundView];
 		
         self.activityView						= [[REActivityView alloc] initWithFrame:self.view.bounds activities:activities];
