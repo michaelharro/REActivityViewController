@@ -43,12 +43,13 @@ extern CGFloat const REActivityPageControlHeight;
 @property (strong, nonatomic) UIScrollView *scrollView;
 @property (strong, nonatomic) UIPageControl *pageControl;
 @property (strong, nonatomic) NSArray *activities;
+@property (strong, nonatomic) NSArray *activityItems;
 @property (weak, nonatomic) REActivityViewController *activityViewController;
 //@property (strong, nonatomic) UIButton *cancelButton;
 @property (nonatomic, assign) NSUInteger maxRowsPerPage;
 @property (nonatomic, assign) NSUInteger maxColumnsPerPage;
 
 
-- (id)initWithFrame:(CGRect)frame activities:(NSArray *)activities;
+- (id)initWithFrame:(CGRect)frame activityItems:(NSArray *)activityItems activities:(NSArray *)activities;
 
 @end

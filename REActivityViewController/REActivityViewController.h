@@ -31,11 +31,12 @@
 
 @property (nonatomic, strong) UIView *backgroundView;
 @property (strong, readonly, nonatomic) NSArray *activities;
+@property (strong, nonatomic) NSArray *activityItems;
 @property (strong, nonatomic) NSDictionary *userInfo;
 @property (strong, nonatomic) REActivityView *activityView;
 @property (weak, nonatomic) UIViewController *presentingController;
 
-- (id)initWithViewController:(UIViewController *)viewController activities:(NSArray *)activities;
+- (id)initWithViewController:(UIViewController *)viewController activityItems:(NSArray *)activityItems activities:(NSArray *)activities;
 - (void)presentFromRootViewController;
 - (void)presentFromViewController:(UIViewController *)controller;
 

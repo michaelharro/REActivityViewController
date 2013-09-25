@@ -25,7 +25,13 @@
 
 #import "REActivity.h"
 
+@interface REActivity ()
+
+@end
+
 @implementation REActivity
+
+@synthesize activityItems = _activityItems;
 
 - (id)initWithTitle:(NSString *)title image:(UIImage *)image actionBlock:(REActivityActionBlock)actionBlock
 {
@@ -36,6 +42,48 @@
         _actionBlock = [actionBlock copy];
     }
     return self;
+}
+
+- (NSString *)activityTitle {
+	
+	return self.title;
+	
+}
+
+- (UIImage *)activityImage {
+	
+	return self.image;
+	
+}
+
+- (BOOL)canPerformWithActivityItems:(NSArray *)activityItems {
+	
+	return NO;
+	
+}
+
+- (void)prepareWithActivityItems:(NSArray *)activityItems {
+	
+	self.activityItems	= ( activityItems ? activityItems : @[] );
+	
+}
+
+- (void)performActivity {
+	
+	if (self.actionBlock) {
+		
+		self.actionBlock(self, self.activityViewController);
+		
+	}
+	
+	[self activityDidFinish:YES];
+	
+}
+
+- (void)activityDidFinish:(BOOL)completed {
+	
+	
+	
 }
 
 @end

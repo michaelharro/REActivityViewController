@@ -46,15 +46,23 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
 #endif
 
 @interface REActivityView ()
+
+@property (nonatomic, strong) NSMutableArray *viewsOnDisplay;
+@property (nonatomic, strong) void (^updateVisibleActivitiesCompletionBlock)(void);
+@property (nonatomic, assign) BOOL updatingVisibleActivities;
+
 - (NSUInteger)numberOfPagesForActivities;
 - (NSInteger)maxActivitiesPerPage;
 - (void)enumerateActivitiesWithBlock:(void (^)(REActivity *activity, NSInteger index, NSInteger row, NSInteger column, NSInteger page))activityblock;
+- (void)updateVisibleActivities;
 
 @end
 
 @implementation REActivityView
 
 @synthesize activities			= _activities;
+@synthesize activityItems		= _activityItems;
+@synthesize viewsOnDisplay		= _viewsOnDisplay;
 @synthesize activityViewController	= _activityViewController;
 @synthesize scrollView			= _scrollView;
 @synthesize pageControl			= _pageControl;
@@ -62,7 +70,7 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
 @synthesize maxColumnsPerPage	= _maxColumnsPerPage;
 
 
-- (id)initWithFrame:(CGRect)frame activities:(NSArray *)activities {
+- (id)initWithFrame:(CGRect)frame activityItems:(NSArray *)activityItems activities:(NSArray *)activities {
     
     self = [super initWithFrame:frame];
 	
@@ -70,6 +78,7 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
 		
         self.clipsToBounds		= YES;
         self.activities			= activities;
+		self.viewsOnDisplay		= [NSMutableArray array];
 		
 		self.maxRowsPerPage		= REActivityViewMaxRowPerPage;
 		self.maxColumnsPerPage	= 0;
@@ -80,18 +89,6 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
         self.scrollView.delegate						= self;
         self.scrollView.autoresizingMask				= UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         [self addSubview:self.scrollView];
-		
-		__weak __typeof(&*self)weakSelf = self;
-		[self enumerateActivitiesWithBlock:^(REActivity *activity, NSInteger index, NSInteger row, NSInteger column, NSInteger page) {
-			
-			UIView *view = [weakSelf viewForActivity:activity
-                                           index:index
-                                               x:(REActivityViewHorizontalMargin + (column * REActivityWidth) + (column * REActivityViewHorizontalMargin)) + (page * CGRectGetWidth(weakSelf.frame))
-                                               y:(REActivityViewVerticalMargin + (row * REActivityHeight) + (row * REActivityViewVerticalMargin))];
-			
-            [weakSelf.scrollView addSubview:view];
-			
-		}];
 		
 		NSInteger numberOfPages			= self.numberOfPagesForActivities;
         self.scrollView.contentSize		= CGSizeMake((numberOfPages) * CGRectGetWidth(self.frame), CGRectGetHeight(self.scrollView.frame));
@@ -107,9 +104,69 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
             self.scrollView.scrollEnabled = NO;
         }
 		
+		self.activityItems	= activityItems;
+		
     }
 	
     return self;
+}
+
+- (void)setActivityItems:(NSArray *)activityItems {
+	
+	[self willChangeValueForKey:@"activityItems"];
+	_activityItems	= [activityItems copy];
+	[self didChangeValueForKey:@"activityItems"];
+	
+	[self updateVisibleActivities];
+	
+	
+}
+
+- (void)updateVisibleActivities {
+	
+	[self.viewsOnDisplay enumerateObjectsUsingBlock:^(id view, NSUInteger index, BOOL *stop) {
+		
+		if ([view respondsToSelector:@selector(removeFromSuperview)]) {
+			
+			[view removeFromSuperview];
+			
+		}
+		
+		[self.viewsOnDisplay removeObject:view];
+		
+	}];
+	
+	__weak __typeof(&*self)weakSelf = self;
+	[self enumerateActivitiesWithBlock:^(REActivity *activity, NSInteger index, NSInteger row, NSInteger column, NSInteger page) {
+		
+		if ([activity isKindOfClass:[REActivity class]]) {
+			
+			if ([(REActivity *)activity canPerformWithActivityItems:self.activityItems]) {
+		
+				UIView *view = [weakSelf viewForActivity:activity
+												   index:index
+													   x:(REActivityViewHorizontalMargin + (column * REActivityWidth) + (column * REActivityViewHorizontalMargin)) + (page * CGRectGetWidth(weakSelf.frame))
+													   y:(REActivityViewVerticalMargin + (row * REActivityHeight) + (row * REActivityViewVerticalMargin))];
+				
+				[weakSelf.scrollView addSubview:view];
+				[self.viewsOnDisplay addObject:view];
+				
+			}
+			
+		}
+		
+	}];
+	
+	NSInteger numberOfPages			= self.numberOfPagesForActivities;
+	self.scrollView.contentSize		= CGSizeMake((numberOfPages) * CGRectGetWidth(self.frame), CGRectGetHeight(self.scrollView.frame));
+	
+	self.pageControl.numberOfPages	= numberOfPages;
+	
+	if (self.pageControl.numberOfPages <= 1) {
+		self.pageControl.hidden		= YES;
+		self.scrollView.scrollEnabled = NO;
+	}
+	
 }
 
 - (NSUInteger)maxColumnsPerPage {
@@ -126,9 +183,9 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
 
 - (NSUInteger)numberOfPagesForActivities {
 	
-	if (self.activities) {
+	if (self.viewsOnDisplay) {
 		
-		return ceil( (CGFloat)self.activities.count / ( (CGFloat)self.maxActivitiesPerPage ) );
+		return ceil( (CGFloat)self.viewsOnDisplay.count / ( (CGFloat)self.maxActivitiesPerPage ) );
 		
 	} else {
 		
@@ -143,8 +200,11 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
 	NSInteger index	= 0;
 	NSInteger row	= -1;
 	NSInteger page	= -1;
+	NSArray *activities	= [self.activities copy];
+	NSInteger numberOfActivities = self.activities.count;
 	
-	for (REActivity *activity in self.activities) {
+	for (NSInteger activityCount = 0; activityCount < numberOfActivities; activityCount++) {
+		id activity = [activities objectAtIndex:activityCount];
 		NSInteger col;
 		
 		col = index % self.maxColumnsPerPage;
@@ -173,8 +233,8 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
     UIButton *button	= [UIButton buttonWithType:UIButtonTypeCustom];
     button.frame		= CGRectMake( 0.5 * (REActivityWidth - REActivityImageWidth), 0, REActivityImageWidth, REActivityImageHeight);
     [button addTarget:self action:@selector(buttonPressed:) forControlEvents:UIControlEventTouchUpInside];
-    [button setBackgroundImage:activity.image forState:UIControlStateNormal];
-    button.accessibilityLabel = activity.title;
+    [button setBackgroundImage:activity.activityImage forState:UIControlStateNormal];
+    button.accessibilityLabel = activity.activityTitle;
     [view addSubview:button];
     
     UILabel *label		= [[UILabel alloc] initWithFrame:CGRectMake(0, REActivityHeight - REActivityLabelHeight, REActivityLabelWidth, REActivityLabelHeight)];
@@ -183,7 +243,7 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
     label.textColor		= [UIColor whiteColor];
     label.shadowColor	= [UIColor colorWithRed:0 green:0 blue:0 alpha:0.75];
     label.shadowOffset	= CGSizeMake(0, -1);
-    label.text			= activity.title;
+    label.text			= activity.activityTitle;
     label.font			= [UIFont boldSystemFontOfSize:11];
     label.numberOfLines = 1;
     [view addSubview:label];
@@ -237,9 +297,8 @@ CGFloat const REActivityPageControlHeight		= 10.0f;
     REActivity *activity = [self.activities objectAtIndex:button.superview.tag - 1];
     activity.activityViewController = self.activityViewController;
 	
-    if (activity.actionBlock) {
-        activity.actionBlock(activity, self.activityViewController);
-    }
+    [activity prepareWithActivityItems:self.activityItems];
+	[activity performActivity];
 	
 }
 

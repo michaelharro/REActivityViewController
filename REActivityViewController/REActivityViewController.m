@@ -37,12 +37,13 @@
 
 @synthesize backgroundView			= _backgroundView;
 @synthesize activities				= _activities;
+@synthesize activityItems			= _activityItems;
 @synthesize userInfo				= _userInfo;
 @synthesize activityView			= _activityView;
 @synthesize presentingController	= _presentingController;
 
-- (id)initWithViewController:(UIViewController *)viewController activities:(NSArray *)activities
-{
+- (id)initWithViewController:(UIViewController *)viewController activityItems:(NSArray *)activityItems activities:(NSArray *)activities {
+	
     self = [super init];
 	
     if (self) {
@@ -58,17 +59,31 @@
 		self.backgroundView						= [[UIView alloc] initWithFrame:self.view.bounds];
 		self.backgroundView.autoresizingMask	= UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
 		self.backgroundView.backgroundColor		= [UIColor blackColor];
-		self.backgroundView.alpha				= 0.6;
+		self.backgroundView.alpha				= 0.75;
 		[self.view addSubview:self.backgroundView];
 		
-        self.activityView						= [[REActivityView alloc] initWithFrame:self.view.bounds activities:activities];
-        self.activityView.autoresizingMask		= UIViewAutoresizingFlexibleWidth;
-        self.activityView.activityViewController= self;
-        [self.view addSubview:self.activityView];
+        self.activityItems						= activityItems;
         
     }
 	
     return self;
+	
+}
+
+- (NSArray *)activityItems {
+	
+	return self.activityView.activityItems;
+	
+}
+
+- (void)setActivityItems:(NSArray *)activityItems {
+	
+	REActivityView *oldActivityView			= self.activityView;
+	self.activityView						= [[REActivityView alloc] initWithFrame:CGRectMake(0, 0, CGRectGetWidth(self.view.frame), CGRectGetHeight(self.view.frame)) activityItems:activityItems activities:self.activities];
+	self.activityView.autoresizingMask		= UIViewAutoresizingFlexibleWidth;
+	self.activityView.activityViewController= self;
+	[oldActivityView removeFromSuperview];
+	[self.view addSubview:self.activityView];
 	
 }
 

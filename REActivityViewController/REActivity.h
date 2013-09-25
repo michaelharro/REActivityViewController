@@ -36,8 +36,17 @@ typedef void (^REActivityActionBlock)(REActivity *activity, REActivityViewContro
 @property (strong, readonly, nonatomic) UIImage *image;
 @property (copy, nonatomic) REActivityActionBlock actionBlock;
 @property (strong, nonatomic) REActivityViewController *activityViewController;
+@property (nonatomic, strong) NSArray *activityItems;
 @property (strong, nonatomic) NSDictionary *userInfo;
 
 - (id)initWithTitle:(NSString *)title image:(UIImage *)image actionBlock:(REActivityActionBlock)actionBlock;
+
+- (NSString *)activityTitle;
+- (UIImage *)activityImage;
+- (BOOL)canPerformWithActivityItems:(NSArray *)activityItems;
+- (void)prepareWithActivityItems:(NSArray *)activityItems;
+- (void)performActivity;
+- (void)activityDidFinish:(BOOL)completed;
+
 
 @end
