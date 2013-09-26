@@ -25,6 +25,8 @@
 
 #import <Foundation/Foundation.h>
 
+extern NSString * const REActivityTypeDefault;
+
 @class REActivityViewController;
 @class REActivity;
 
@@ -41,6 +43,7 @@ typedef void (^REActivityActionBlock)(REActivity *activity, REActivityViewContro
 
 - (id)initWithTitle:(NSString *)title image:(UIImage *)image actionBlock:(REActivityActionBlock)actionBlock;
 
+- (NSString *)activityType;
 - (NSString *)activityTitle;
 - (UIImage *)activityImage;
 - (BOOL)canPerformWithActivityItems:(NSArray *)activityItems;

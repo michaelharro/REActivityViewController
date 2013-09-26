@@ -25,6 +25,8 @@
 
 #import "REActivity.h"
 
+NSString * const REActivityTypeDefault	= @"com.missionhub.reactivity.type.default";
+
 @interface REActivity ()
 
 @end
@@ -42,6 +44,11 @@
         _actionBlock = [actionBlock copy];
     }
     return self;
+}
+- (NSString *)activityType {
+	
+	return REActivityTypeDefault;
+	
 }
 
 - (NSString *)activityTitle {
